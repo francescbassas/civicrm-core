@@ -146,6 +146,26 @@ class SqlFunctionTest extends Api4TestBase implements TransactionalInterface {
     $this->assertEquals('January', $agg['months']);
     $this->assertTrue($agg['is_donation_1']);
     $this->assertFalse($agg['is_donation_4']);
+
+    // Test GROUP_LAST
+    $agg = Contribution::get(FALSE)
+      ->addGroupBy('contact_id')
+      ->addWhere('contact_id', '=', $cid)
+      ->addSelect('GROUP_LAST(financial_type_id:name ORDER BY id) AS last_type')
+      ->addSelect('GROUP_LAST(financial_type_id:name ORDER BY id DESC) AS first_type_via_desc')
+      ->addSelect('GROUP_LAST(total_amount ORDER BY id) AS last_amount')
+      ->addSelect('GROUP_LAST(MONTH(receive_date):label ORDER BY id) AS last_month')
+      ->addSelect("GROUP_LAST((financial_type_id = 1) ORDER BY id) AS is_last_donation")
+      ->addSelect('COUNT(*) AS count')
+      ->execute()
+      ->first();
+
+    $this->assertTrue(4 === $agg['count']);
+    $this->assertEquals('Event Fee', $agg['last_type']);
+    $this->assertEquals('Donation', $agg['first_type_via_desc']);
+    $this->assertEquals(400, $agg['last_amount']);
+    $this->assertEquals('April', $agg['last_month']);
+    $this->assertFalse($agg['is_last_donation']);
   }
 
   public function testGroupConcatUnique(): void {
